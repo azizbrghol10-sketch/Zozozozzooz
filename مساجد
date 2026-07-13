@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التطبيق الإسلامي المتكامل</title>
+    <style>
+        :root {
+            --primary: #1b4d3e;
+            --secondary: #c29b38;
+            --bg: #f4f6f4;
+            --text: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: var(--primary);
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #12352b;
+        }
+        .compass-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        .compass {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 5px solid var(--primary);
+            position: relative;
+            transition: transform 0.1s ease-out;
+            background: radial-gradient(circle, #fff 70%, #eaeaea 100%);
+        }
+        .pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 90px;
+            background: red;
+            transform: translate(-50%, -100%);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        .kaaba-pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 80px;
+            background: var(--secondary);
+            transform: translate(-50%, -100%) rotate(135deg); /* زاوية افتراضية للقبلة */
+        }
+        .kaaba-icon {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        input[type="time"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .status {
+            text-align: center;
+            font-weight: bold;
+            color: green;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>التطبيق الإسلامي ومساعد الصلاة</h1>
+
+    <!-- قسم منبه الصلاة والأذان -->
+    <div class="section">
+        <h2>🕌 تذكير الصلوات (الأذان)</h2>
+        <label for="prayer-select">اختر الصلاة القادمة:</label>
+        <select id="prayer-select">
+            <option value="الفجر">الفجر</option>
+            <option value="الظهر">الظهر</option>
+            <option value="العصر">العصر</option>
+            <option value="المغرب">المغرب</option>
+            <option value="العشاء">العشاء</option>
+        </select>
+        
+        <label for="prayer-time">وقت الأذان:</label>
+        <input type="time" id="prayer-time">
+        <button class="btn" onclick="setPrayerAlarm()">ضبط منبه الصلاة</button>
+        <div id="prayer-status" class="status"></div>
+    </div>
+
+    <!-- قسم منبه النوم -->
+    <div class="section">
+        <h2>⏰ تنبيه النوم والاستيقاظ</h2>
+        <label for="sleep-time">وقت النوم (تذكير بالأذكار):</label>
+        <input type="time" id="sleep-time">
+        
+        <label for="wake-time">وقت الاستيقاظ:</label>
+        <input type="time" id="wake-time">
+        
+        <button class="btn" onclick="setSleepAlarms()">ضبط منبهات النوم</button>
+        <div id="sleep-status" class="status"></div>
+    </div>
+
+    <!-- قسم اتجاه القبلة -->
+    <div class="section">
+        <h2>🧭 اتجاه القبلة</h2>
+        <p style="text-align: center; font-size: 13px;">قم بتدوير الهاتف لتحديد الاتجاه (السهم الذهبي يشير للقبلة تقريباً)</p>
+        <div class="compass-container">
+            <div class="compass" id="compass">
+                <div class="pointer"></div>
+                <div class="kaaba-pointer"><div class="kaaba-icon">القبلة</div></div>
+            </div>
+        </div>
+        <button class="btn" onclick="initCompass()">تفعيل البوصلة</button>
+    </div>
+</div>
+
+<script>
+    // استخدام أصوات ومؤثرات صوتية مدمجة عبر متصفح الإنترنت (توليد نغمات إلكترونية لتجنب الروابط المكسورة)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // دالة لتوليد نغمة منبه النوم والاستيقاظ
+    function playAlarmSound() {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // تردد النغمة
+        gain.gain.setValueAtTime(1, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 2); // تتوقف بعد ثانيتين
+    }
+
+    // دالة محاكاة صوت الأذان (توليد نغمات روحانية متتابعة)
+    function playAdhanSound() {
+        const notes = [440, 494, 523, 587, 659, 587, 523, 440];
+        notes.forEach((note, index) => {
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(note, audioCtx.currentTime + (index * 0.6));
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime + (index * 0.6));
+            osc.start(audioCtx.currentTime + (index * 0.6));
+            osc.stop(audioCtx.currentTime + (index * 0.6) + 0.5);
+        });
+    }
+
+    // فحص المنبهات كل ثانية
+    setInterval(() => {
+        const now = new Date();
+        const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const seconds = now.getSeconds();
+
+        if (seconds === 0) { // الفحص عند بداية كل دقيقة لعدم تكرار الصوت
+            // منبه الصلاة
+            const prayerTime = document.getElementById('prayer-time').value;
+            if (prayerTime === currentTimeString) {
+                alert(`حان الآن موعد أذان صلاة ${document.getElementById('prayer-select').value}`);
+                playAdhanSound();
+            }
+
+            // منبه النوم
+            const sleepTime = document.getElementById('sleep-time').value;
+            if (sleepTime === currentTimeString) {
+                alert("حان موعد النوم، لا تنسَ قراءة أذكار النوم.");
+                playAlarmSound();
+            }
+
+            // منبه الاستيقاظ
+            const wakeTime = document.getElementById('wake-time').value;
+            if (wakeTime === currentTimeString) {
+                alert("حان وقت الاستيقاظ، صلاة الفجر/أذكار الصباح.");
+                playAlarmSound();
+            }
+        }
+    }, 1000);
+
+    function setPrayerAlarm() {
+        const prayer = document.getElementById('prayer-select').value;
+        const time = document.getElementById('prayer-time').value;
+        if(time) {
+            document.getElementById('prayer-status').innerText = `تم ضبط منبه صلاة ${prayer} على الساعة ${time}`;
+        }
+    }
+
+    function setSleepAlarms() {
+        const sleep = document.getElementById('sleep-time').value;
+        const wake = document.getElementById('wake-time').value;
+        if(sleep || wake) {
+            document.getElementById('sleep-status').innerText = `تم حفظ مواعيد النوم والاستيقاظ بنجاح.`;
+        }
+    }
+
+    // تفعيل البوصلة باستخدام مستشعرات الهاتف
+    function initCompass() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    } else {
+                        alert('تم رفض صلاحية الوصول للمستشعر.');
+                    }
+                })
+                .catch(console.error);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
+    }
+
+    function handleOrientation(event) {
+        let heading = event.webkitCompassHeading || Math.abs(event.alpha - 360);
+        const compass = document.getElementById('compass');
+        // تدوير البوصلة بناءً على اتجاه الهاتف
+        compass.style.transform = `rotate(${-heading}deg)`;
+    }
+</script>
+
+</body>
+</html>
