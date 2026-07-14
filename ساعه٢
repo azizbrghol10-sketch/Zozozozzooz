@@ -1,0 +1,900 @@
+# جميع ملفات مشروع مواقيت الصلاة والمنبه
+
+انسخ كل قسم إلى ملف بنفس المسار المكتوب في العنوان عند إنشاء الملفات يدويًا على GitHub.
+
+---
+
+## `package.json`
+
+```json
+{
+  "name": "prayer-clock-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "تطبيق ويب لمواقيت الصلاة، اتجاه القبلة، والمنبه مع أذان قابل للتخصيص",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.383.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.3.1"
+  }
+}
+```
+
+---
+
+## `vite.config.js`
+
+```js
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+});
+```
+
+---
+
+## `tailwind.config.js`
+
+```js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
+
+---
+
+## `postcss.config.js`
+
+```js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
+
+---
+
+## `index.html`
+
+```html
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#3F4B23" />
+    <title>مواقيت الصلاة والمنبه</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+```
+
+---
+
+## `src/main.jsx`
+
+```jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+---
+
+## `src/index.css`
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+```
+
+---
+
+## `src/App.jsx`
+
+```jsx
+import React, { useState, useEffect, useRef } from "react";
+import { Clock, MapPin, Compass, Bell, Settings, Upload, Play, Square, Plus, Trash2, Sun, Moon, Navigation, X, Check, RefreshCw } from "lucide-react";
+
+/* ---------------- localStorage persistence (replaces artifact window.storage) ---------------- */
+const STORAGE_KEY = "prayer-app-settings";
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    /* storage unavailable (e.g. private browsing) — ignore */
+  }
+}
+
+/* ---------------- Prayer time astronomy helpers (approximate solar-position method) ---------------- */
+const dsin = (d) => Math.sin((d * Math.PI) / 180);
+const dcos = (d) => Math.cos((d * Math.PI) / 180);
+const dtan = (d) => Math.tan((d * Math.PI) / 180);
+const darcsin = (x) => (Math.asin(x) * 180) / Math.PI;
+const darccos = (x) => (Math.acos(Math.min(1, Math.max(-1, x))) * 180) / Math.PI;
+const darctan2 = (y, x) => (Math.atan2(y, x) * 180) / Math.PI;
+const darccot = (x) => darctan2(1, x);
+const fixAngle = (a) => { a = a - 360 * Math.floor(a / 360); return a < 0 ? a + 360 : a; };
+const fixHour = (a) => { a = a - 24 * Math.floor(a / 24); return a < 0 ? a + 24 : a; };
+
+function julianDay(year, month, day) {
+  if (month <= 2) { year -= 1; month += 12; }
+  const A = Math.floor(year / 100);
+  const B = 2 - A + Math.floor(A / 4);
+  return Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + B - 1524.5;
+}
+
+function sunPosition(jd) {
+  const D = jd - 2451545.0;
+  const g = fixAngle(357.529 + 0.98560028 * D);
+  const q = fixAngle(280.459 + 0.98564736 * D);
+  const L = fixAngle(q + 1.915 * dsin(g) + 0.02 * dsin(2 * g));
+  const e = 23.439 - 0.00000036 * D;
+  const RA = darctan2(dcos(e) * dsin(L), dcos(L)) / 15;
+  const eqt = q / 15 - fixHour(RA);
+  const decl = darcsin(dsin(e) * dsin(L));
+  return { decl, eqt };
+}
+
+const METHODS = {
+  MWL: { name: "رابطة العالم الإسلامي", fajr: 18, isha: 18 },
+  ISNA: { name: "الجمعية الإسلامية لأمريكا الشمالية", fajr: 15, isha: 15 },
+  EGYPT: { name: "الهيئة المصرية العامة للمساحة", fajr: 19.5, isha: 17.5 },
+  MAKKAH: { name: "أم القرى (مكة)", fajr: 18.5, isha: "90min" },
+  KARACHI: { name: "جامعة العلوم الإسلامية كراتشي", fajr: 18, isha: 18 },
+};
+
+function computeTimes({ lat, lng, timezone, date, method, asrFactor, offsets }) {
+  const jd = julianDay(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  const { decl, eqt } = sunPosition(jd - lng / (15 * 24));
+  const dhuhr = 12 - eqt - lng / 15 + timezone;
+
+  const hourAngle = (angle) => {
+    const num = -dsin(angle) - dsin(lat) * dsin(decl);
+    const den = dcos(lat) * dcos(decl);
+    if (Math.abs(num / den) > 1) return null;
+    return darccos(num / den) / 15;
+  };
+  const asrHourAngle = () => {
+    const altitude = darccot(asrFactor + Math.abs(dtan(lat - decl)));
+    const num = dsin(altitude) - dsin(lat) * dsin(decl);
+    const den = dcos(lat) * dcos(decl);
+    if (Math.abs(num / den) > 1) return null;
+    return darccos(num / den) / 15;
+  };
+
+  const m = METHODS[method];
+  const fajrT = hourAngle(m.fajr);
+  const sunriseT = hourAngle(0.833);
+  const asrT = asrHourAngle();
+  const maghribT = hourAngle(0.833);
+  const ishaT = m.isha === "90min" ? null : hourAngle(m.isha);
+
+  const toDate = (h) => {
+    if (h === null) return null;
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setMinutes(Math.round(h * 60));
+    return d;
+  };
+
+  const fajr = toDate(fajrT !== null ? dhuhr - fajrT : null);
+  const sunrise = toDate(sunriseT !== null ? dhuhr - sunriseT : null);
+  const dhuhrD = toDate(dhuhr);
+  const asr = toDate(asrT !== null ? dhuhr + asrT : null);
+  const maghrib = toDate(maghribT !== null ? dhuhr + maghribT : null);
+  const isha = ishaT !== null ? toDate(dhuhr + ishaT) : (maghrib ? new Date(maghrib.getTime() + 90 * 60000) : null);
+
+  const applyOffset = (d, mins) => (d ? new Date(d.getTime() + (mins || 0) * 60000) : null);
+
+  return {
+    fajr: applyOffset(fajr, offsets.fajr),
+    sunrise: applyOffset(sunrise, offsets.sunrise),
+    dhuhr: applyOffset(dhuhrD, offsets.dhuhr),
+    asr: applyOffset(asr, offsets.asr),
+    maghrib: applyOffset(maghrib, offsets.maghrib),
+    isha: applyOffset(isha, offsets.isha),
+  };
+}
+
+function qiblaBearing(lat, lng) {
+  const kLat = 21.4225, kLng = 39.8262;
+  const phiK = (kLat * Math.PI) / 180, phi = (lat * Math.PI) / 180;
+  const lambdaK = (kLng * Math.PI) / 180, lambda = (lng * Math.PI) / 180;
+  const psi = Math.atan2(
+    Math.sin(lambdaK - lambda),
+    Math.cos(phi) * Math.tan(phiK) - Math.sin(phi) * Math.cos(lambdaK - lambda)
+  );
+  return (((psi * 180) / Math.PI) + 360) % 360;
+}
+
+const fmtTime = (d) => d ? d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true }) : "--:--";
+
+const PRAYERS = [
+  { key: "fajr", label: "الفجر", icon: Moon },
+  { key: "sunrise", label: "الشروق", icon: Sun },
+  { key: "dhuhr", label: "الظهر", icon: Sun },
+  { key: "asr", label: "العصر", icon: Sun },
+  { key: "maghrib", label: "المغرب", icon: Moon },
+  { key: "isha", label: "العشاء", icon: Moon },
+];
+
+/* ---------------- Web Audio built-in tones ---------------- */
+function playBuiltInTone(toneId, durationMs = 4000) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const now = ctx.currentTime;
+  const patterns = {
+    tone1: [880, 660, 880, 660],
+    tone2: [523, 659, 784, 659],
+    tone3: [440, 554, 659, 554, 440],
+  };
+  const freqs = patterns[toneId] || patterns.tone1;
+  const step = durationMs / 1000 / freqs.length;
+  freqs.forEach((f, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0, now + i * step);
+    gain.gain.linearRampToValueAtTime(0.25, now + i * step + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + i * step + step * 0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + i * step);
+    osc.stop(now + i * step + step);
+  });
+  setTimeout(() => ctx.close(), durationMs + 200);
+  return ctx;
+}
+
+/* ---------------- Decorative SVG: minaret + crescents ---------------- */
+function MosqueSkyline() {
+  return (
+    <svg viewBox="0 0 800 160" className="w-full h-28 md:h-36" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="silhouette" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3F4B23" />
+          <stop offset="100%" stopColor="#2A3318" />
+        </linearGradient>
+      </defs>
+      <g fill="url(#silhouette)">
+        <circle cx="120" cy="30" r="16" fill="#E8C766" opacity="0.9" />
+        <path d="M108 30a12 12 0 1 0 20-10 15 15 0 1 1-20 10z" fill="#2A3318" opacity="0.35" />
+        <rect x="60" y="90" width="14" height="70" />
+        <path d="M60 90 q7 -22 14 0 z" />
+        <circle cx="67" cy="82" r="3" />
+        <rect x="720" y="95" width="14" height="65" />
+        <path d="M720 95 q7 -20 14 0 z" />
+        <circle cx="727" cy="88" r="3" />
+        <path d="M150 160 L150 70 Q150 40 200 40 Q250 40 250 70 L250 160 Z" />
+        <rect x="190" y="20" width="20" height="24" />
+        <path d="M190 20 q10 -18 20 0 z" />
+        <circle cx="200" cy="10" r="3" />
+        <rect x="330" y="60" width="10" height="100" />
+        <path d="M330 60 q5 -16 10 0 z" />
+        <rect x="460" y="60" width="10" height="100" />
+        <path d="M460 60 q5 -16 10 0 z" />
+        <path d="M380 160 L380 95 Q380 65 400 65 Q420 65 420 95 L420 160 Z" />
+        <rect x="590" y="75" width="12" height="85" />
+        <path d="M590 75 q6 -18 12 0 z" />
+        <circle cx="596" cy="66" r="2.5" />
+        <rect x="0" y="150" width="800" height="10" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+/* ---------------- Main App ---------------- */
+export default function App() {
+  const [tab, setTab] = useState("home");
+  const [now, setNow] = useState(new Date());
+  const [location, setLocation] = useState({ lat: 24.7136, lng: 46.6753, city: "الرياض (افتراضي)" });
+  const [timezone, setTimezone] = useState(-new Date().getTimezoneOffset() / 60);
+  const [method, setMethod] = useState("MWL");
+  const [asrFactor, setAsrFactor] = useState(1);
+  const [offsets, setOffsets] = useState({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
+  const [locating, setLocating] = useState(false);
+  const [heading, setHeading] = useState(null);
+  const [tones, setTones] = useState([
+    { id: "tone1", name: "نغمة 1", type: "builtin" },
+    { id: "tone2", name: "نغمة 2", type: "builtin" },
+    { id: "tone3", name: "نغمة 3", type: "builtin" },
+  ]);
+  const [alarms, setAlarms] = useState([]);
+  const [prayerAlerts, setPrayerAlerts] = useState({ fajr: true, sunrise: false, dhuhr: true, asr: true, maghrib: true, isha: true });
+  const [activeAdhanTone, setActiveAdhanTone] = useState("tone2");
+  const [activeAlarmTone, setActiveAlarmTone] = useState("tone1");
+  const [ringing, setRinging] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newAlarmTime, setNewAlarmTime] = useState("06:00");
+  const [newAlarmLabel, setNewAlarmLabel] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const lastTriggerRef = useRef({});
+  const audioElRef = useRef(null);
+  const ringToneCtxRef = useRef(null);
+
+  /* clock tick */
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* load persisted settings (once, on mount) */
+  useEffect(() => {
+    const s = loadSettings();
+    if (s) {
+      if (s.location) setLocation(s.location);
+      if (s.timezone !== undefined) setTimezone(s.timezone);
+      if (s.method) setMethod(s.method);
+      if (s.asrFactor) setAsrFactor(s.asrFactor);
+      if (s.offsets) setOffsets(s.offsets);
+      if (s.alarms) setAlarms(s.alarms);
+      if (s.prayerAlerts) setPrayerAlerts(s.prayerAlerts);
+      if (s.activeAdhanTone) setActiveAdhanTone(s.activeAdhanTone);
+      if (s.activeAlarmTone) setActiveAlarmTone(s.activeAlarmTone);
+    }
+    setLoaded(true);
+  }, []);
+
+  /* persist settings */
+  useEffect(() => {
+    if (!loaded) return;
+    saveSettings({ location, timezone, method, asrFactor, offsets, alarms, prayerAlerts, activeAdhanTone, activeAlarmTone });
+  }, [loaded, location, timezone, method, asrFactor, offsets, alarms, prayerAlerts, activeAdhanTone, activeAlarmTone]);
+
+  const times = computeTimes({ lat: location.lat, lng: location.lng, timezone, date: now, method, asrFactor, offsets });
+  const qibla = qiblaBearing(location.lat, location.lng);
+
+  /* check alarms / prayer alerts every second */
+  useEffect(() => {
+    const hhmm = now.toTimeString().slice(0, 5);
+    const key = now.toDateString() + "_" + hhmm;
+
+    alarms.forEach((a) => {
+      if (a.enabled && a.time === hhmm && lastTriggerRef.current[a.id + hhmm] !== true) {
+        lastTriggerRef.current[a.id + hhmm] = true;
+        triggerRing(a.label || "تنبيه المنبه", a.tone || activeAlarmTone);
+      }
+    });
+
+    PRAYERS.forEach((p) => {
+      if (p.key === "sunrise") return;
+      const t = times[p.key];
+      if (!t) return;
+      const th = t.toTimeString().slice(0, 5);
+      if (prayerAlerts[p.key] && th === hhmm && lastTriggerRef.current["prayer_" + p.key + key] !== true) {
+        lastTriggerRef.current["prayer_" + p.key + key] = true;
+        triggerRing("حان الآن وقت أذان " + p.label, activeAdhanTone);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now]);
+
+  const triggerRing = (label, toneId) => {
+    setRinging({ label, toneId });
+    playTone(toneId, 25000);
+  };
+
+  const playTone = (toneId, duration = 4000) => {
+    const tone = tones.find((t) => t.id === toneId);
+    if (!tone) return;
+    if (tone.type === "builtin") {
+      ringToneCtxRef.current = playBuiltInTone(toneId, duration);
+    } else if (tone.type === "custom") {
+      if (audioElRef.current) { audioElRef.current.pause(); }
+      const audio = new Audio(tone.url);
+      audio.loop = true;
+      audio.play().catch(() => {});
+      audioElRef.current = audio;
+      setTimeout(() => { audio.pause(); }, duration);
+    }
+  };
+
+  const stopRinging = () => {
+    setRinging(null);
+    if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current = null; }
+    if (ringToneCtxRef.current) { try { ringToneCtxRef.current.close(); } catch (e) {} }
+  };
+
+  const detectLocation = () => {
+    setLocating(true);
+    if (!navigator.geolocation) { setLocating(false); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, city: "موقعي الحالي" });
+        setTimezone(-new Date().getTimezoneOffset() / 60);
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  /* compass */
+  const handleOrientation = (e) => {
+    let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : (e.alpha != null ? 360 - e.alpha : null);
+    if (h != null) setHeading(h);
+  };
+
+  const enableCompass = async () => {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      try {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm !== "granted") return;
+      } catch (e) { return; }
+    }
+    window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+    window.addEventListener("deviceorientation", handleOrientation, true);
+  };
+
+  useEffect(() => () => {
+    window.removeEventListener("deviceorientationabsolute", handleOrientation, true);
+    window.removeEventListener("deviceorientation", handleOrientation, true);
+  }, []);
+
+  const handleFileUpload = (e, purpose) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const id = "custom_" + Date.now();
+    const newTone = { id, name: file.name.replace(/\.[^/.]+$/, ""), type: "custom", url };
+    setTones((prev) => [...prev, newTone]);
+    if (purpose === "adhan") setActiveAdhanTone(id);
+    else setActiveAlarmTone(id);
+    e.target.value = "";
+  };
+
+  const addAlarm = () => {
+    setAlarms((prev) => [...prev, { id: Date.now(), time: newAlarmTime, label: newAlarmLabel || "استيقظ", enabled: true, tone: activeAlarmTone }]);
+    setNewAlarmLabel("");
+  };
+  const removeAlarm = (id) => setAlarms((prev) => prev.filter((a) => a.id !== id));
+  const toggleAlarm = (id) => setAlarms((prev) => prev.map((a) => a.id === id ? { ...a, enabled: !a.enabled } : a));
+
+  const nextPrayer = (() => {
+    const list = PRAYERS.filter((p) => p.key !== "sunrise" && times[p.key]);
+    const upcoming = list.find((p) => times[p.key] > now);
+    return upcoming || list[0];
+  })();
+
+  const compassRotation = heading != null ? qibla - heading : qibla;
+
+  return (
+    <div dir="rtl" className="min-h-screen w-full" style={{
+      background: "radial-gradient(ellipse at top, #E3B94A 0%, #C79A2E 35%, #8B6914 75%, #5C4410 100%)",
+      fontFamily: "'Tajawal','Segoe UI',sans-serif",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700&display=swap');
+        .amiri { font-family: 'Amiri', serif; }
+        .islamic-pattern {
+          background-image: radial-gradient(circle, rgba(255,246,224,0.10) 1px, transparent 1px);
+          background-size: 22px 22px;
+        }
+      `}</style>
+
+      <div className="max-w-md mx-auto min-h-screen relative islamic-pattern">
+        {/* Header */}
+        <div className="px-5 pt-6 pb-2 text-center relative">
+          <div className="flex justify-center mb-1">
+            <Moon className="w-6 h-6" style={{ color: "#3F4B23" }} />
+          </div>
+          <h1 className="amiri text-3xl font-bold" style={{ color: "#2A3318" }}>مواقيت الصلاة</h1>
+          <p className="text-xs mt-1" style={{ color: "#4A3E10" }}>{location.city} · {location.lat.toFixed(2)}°, {location.lng.toFixed(2)}°</p>
+        </div>
+
+        <MosqueSkyline />
+
+        {/* Clock */}
+        <div className="mx-5 -mt-3 rounded-2xl p-5 shadow-lg text-center" style={{ background: "linear-gradient(135deg,#4A5D23,#2A3318)", border: "1px solid #E8C766" }}>
+          <div className="amiri text-5xl font-bold tracking-wide" style={{ color: "#FFF6E0" }}>
+            {now.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+          </div>
+          <div className="text-sm mt-1" style={{ color: "#E8C766" }}>
+            {now.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </div>
+          {nextPrayer && (
+            <div className="mt-3 pt-3 flex items-center justify-center gap-2 text-sm" style={{ borderTop: "1px solid rgba(232,199,102,0.3)", color: "#FFF6E0" }}>
+              <Bell className="w-4 h-4" style={{ color: "#E8C766" }} />
+              <span>القادمة: {nextPrayer.label} — {fmtTime(times[nextPrayer.key])}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex mx-5 mt-5 rounded-xl overflow-hidden" style={{ border: "1px solid #4A5D23" }}>
+          {[
+            { id: "home", label: "المواقيت", icon: Clock },
+            { id: "qibla", label: "القبلة", icon: Compass },
+            { id: "alarms", label: "المنبه", icon: Bell },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className="flex-1 py-2.5 flex flex-col items-center gap-1 text-xs font-medium transition-colors"
+              style={{ background: tab === t.id ? "#3F4B23" : "transparent", color: tab === t.id ? "#FFF6E0" : "#3F4B23" }}>
+              <t.icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* HOME TAB */}
+        {tab === "home" && (
+          <div className="px-5 mt-4 pb-8 space-y-2.5">
+            {PRAYERS.map((p) => {
+              const isNext = nextPrayer && nextPrayer.key === p.key;
+              return (
+                <div key={p.key} className="flex items-center justify-between rounded-xl px-4 py-3"
+                  style={{
+                    background: isNext ? "linear-gradient(90deg,#5C6B33,#3F4B23)" : "rgba(255,246,224,0.55)",
+                    border: isNext ? "1px solid #E8C766" : "1px solid rgba(74,93,35,0.25)",
+                  }}>
+                  <div className="flex items-center gap-3">
+                    <p.icon className="w-4 h-4" style={{ color: isNext ? "#E8C766" : "#4A5D23" }} />
+                    <span className="font-medium" style={{ color: isNext ? "#FFF6E0" : "#2A3318" }}>{p.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold amiri text-lg" style={{ color: isNext ? "#FFF6E0" : "#2A3318" }}>{fmtTime(times[p.key])}</span>
+                    {p.key !== "sunrise" && (
+                      <button onClick={() => setPrayerAlerts((prev) => ({ ...prev, [p.key]: !prev[p.key] }))}>
+                        <Bell className="w-4 h-4" style={{ color: prayerAlerts[p.key] ? (isNext ? "#E8C766" : "#4A5D23") : "#B0A98C" }} fill={prayerAlerts[p.key] ? "currentColor" : "none"} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <button onClick={() => setShowSettings(true)}
+              className="w-full mt-3 rounded-xl py-3 flex items-center justify-center gap-2 font-medium"
+              style={{ background: "#2A3318", color: "#E8C766" }}>
+              <Settings className="w-4 h-4" /> ضبط الموقع والحسابات
+            </button>
+          </div>
+        )}
+
+        {/* QIBLA TAB */}
+        {tab === "qibla" && (
+          <div className="px-5 mt-6 pb-10 flex flex-col items-center">
+            <p className="text-sm mb-4 text-center" style={{ color: "#2A3318" }}>اتجاه القبلة: <strong>{qibla.toFixed(1)}°</strong> من الشمال</p>
+            {heading === null && (
+              <button onClick={enableCompass} className="mb-6 rounded-xl px-5 py-3 flex items-center gap-2 font-medium"
+                style={{ background: "#3F4B23", color: "#FFF6E0" }}>
+                <Navigation className="w-4 h-4" /> تفعيل البوصلة
+              </button>
+            )}
+            <div className="relative w-64 h-64 rounded-full flex items-center justify-center"
+              style={{ background: "radial-gradient(circle,#FFF6E0,#E8C766)", border: "4px solid #3F4B23" }}>
+              <div className="absolute inset-3 rounded-full" style={{ border: "1px dashed #4A5D23" }} />
+              <span className="absolute top-2 text-xs font-bold" style={{ color: "#2A3318" }}>ش</span>
+              <span className="absolute bottom-2 text-xs font-bold" style={{ color: "#2A3318" }}>ج</span>
+              <span className="absolute right-2 text-xs font-bold" style={{ color: "#2A3318" }}>غ</span>
+              <span className="absolute left-2 text-xs font-bold" style={{ color: "#2A3318" }}>ق</span>
+              <div className="transition-transform duration-200" style={{ transform: `rotate(${compassRotation}deg)` }}>
+                <div className="flex flex-col items-center">
+                  <Navigation className="w-16 h-16" style={{ color: "#4A5D23" }} fill="#4A5D23" />
+                </div>
+              </div>
+              <div className="absolute w-3 h-3 rounded-full" style={{ background: "#2A3318" }} />
+            </div>
+            <p className="text-xs mt-5 text-center max-w-xs" style={{ color: "#4A3E10" }}>
+              {heading === null ? "فعّل البوصلة ثم وجّه الجوال بشكل مسطح — السهم يشير إلى الكعبة." : "وجّه السهم بعيدًا عنك ليصبح مؤشر البوصلة نحو القبلة."}
+            </p>
+          </div>
+        )}
+
+        {/* ALARMS TAB */}
+        {tab === "alarms" && (
+          <div className="px-5 mt-4 pb-10 space-y-4">
+            <div className="rounded-xl p-4" style={{ background: "rgba(255,246,224,0.6)", border: "1px solid rgba(74,93,35,0.25)" }}>
+              <h3 className="font-semibold mb-3" style={{ color: "#2A3318" }}>إضافة منبه جديد</h3>
+              <div className="flex gap-2 mb-2">
+                <input type="time" value={newAlarmTime} onChange={(e) => setNewAlarmTime(e.target.value)}
+                  className="flex-1 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid #4A5D23", background: "#FFF6E0" }} />
+              </div>
+              <input type="text" placeholder="تسمية (مثال: للاستيقاظ)" value={newAlarmLabel} onChange={(e) => setNewAlarmLabel(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm mb-3" style={{ border: "1px solid #4A5D23", background: "#FFF6E0" }} />
+              <button onClick={addAlarm} className="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 font-medium"
+                style={{ background: "#3F4B23", color: "#FFF6E0" }}>
+                <Plus className="w-4 h-4" /> إضافة المنبه
+              </button>
+            </div>
+
+            {alarms.length > 0 && (
+              <div className="space-y-2">
+                {alarms.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-xl px-4 py-3"
+                    style={{ background: "rgba(255,246,224,0.55)", border: "1px solid rgba(74,93,35,0.25)" }}>
+                    <div>
+                      <div className="amiri text-xl font-bold" style={{ color: "#2A3318" }}>{a.time}</div>
+                      <div className="text-xs" style={{ color: "#4A3E10" }}>{a.label}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => toggleAlarm(a.id)}
+                        className="w-11 h-6 rounded-full relative transition-colors"
+                        style={{ background: a.enabled ? "#4A5D23" : "#C9BFA0" }}>
+                        <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                          style={{ [a.enabled ? "right" : "left"]: "2px" }} />
+                      </button>
+                      <button onClick={() => removeAlarm(a.id)}><Trash2 className="w-4 h-4" style={{ color: "#8B3A2A" }} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* tone settings */}
+            <div className="rounded-xl p-4" style={{ background: "rgba(255,246,224,0.6)", border: "1px solid rgba(74,93,35,0.25)" }}>
+              <h3 className="font-semibold mb-3" style={{ color: "#2A3318" }}>نغمة المنبه</h3>
+              <ToneSelector tones={tones} active={activeAlarmTone} onSelect={setActiveAlarmTone} onPlay={(id) => playTone(id, 2500)} />
+              <label className="mt-3 flex items-center gap-2 text-sm cursor-pointer" style={{ color: "#3F4B23" }}>
+                <Upload className="w-4 h-4" /> رفع نغمة مخصصة
+                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, "alarm")} />
+              </label>
+            </div>
+
+            <div className="rounded-xl p-4" style={{ background: "rgba(255,246,224,0.6)", border: "1px solid rgba(74,93,35,0.25)" }}>
+              <h3 className="font-semibold mb-3" style={{ color: "#2A3318" }}>صوت الأذان (يمكن إضافة صوت شيخ)</h3>
+              <ToneSelector tones={tones} active={activeAdhanTone} onSelect={setActiveAdhanTone} onPlay={(id) => playTone(id, 3500)} />
+              <label className="mt-3 flex items-center gap-2 text-sm cursor-pointer" style={{ color: "#3F4B23" }}>
+                <Upload className="w-4 h-4" /> رفع تسجيل أذان (ملف صوتي)
+                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, "adhan")} />
+              </label>
+              <p className="text-xs mt-2" style={{ color: "#6B5A1E" }}>ملاحظة: الملفات الصوتية المرفوعة تُخزَّن في هذا المتصفح فقط ولا تُرفع مع الكود إلى GitHub.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Settings modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-40 flex items-end md:items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="w-full max-w-md rounded-t-2xl md:rounded-2xl p-5 max-h-[85vh] overflow-y-auto" style={{ background: "#FFF6E0" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg" style={{ color: "#2A3318" }}>الإعدادات</h2>
+              <button onClick={() => setShowSettings(false)}><X className="w-5 h-5" style={{ color: "#2A3318" }} /></button>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm font-medium block mb-1" style={{ color: "#3F4B23" }}>الموقع الجغرافي</label>
+              <button onClick={detectLocation} disabled={locating}
+                className="w-full mb-2 rounded-lg py-2.5 flex items-center justify-center gap-2 text-sm font-medium"
+                style={{ background: "#3F4B23", color: "#FFF6E0" }}>
+                {locating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                {locating ? "جاري تحديد الموقع..." : "استخدام موقعي الحالي"}
+              </button>
+              <div className="flex gap-2">
+                <input type="number" step="0.0001" value={location.lat}
+                  onChange={(e) => setLocation((p) => ({ ...p, lat: parseFloat(e.target.value) || 0, city: "موقع مخصص" }))}
+                  placeholder="خط العرض" className="flex-1 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid #4A5D23" }} />
+                <input type="number" step="0.0001" value={location.lng}
+                  onChange={(e) => setLocation((p) => ({ ...p, lng: parseFloat(e.target.value) || 0, city: "موقع مخصص" }))}
+                  placeholder="خط الطول" className="flex-1 rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid #4A5D23" }} />
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm" style={{ color: "#3F4B23" }}>فرق التوقيت (UTC):</span>
+                <input type="number" step="0.5" value={timezone} onChange={(e) => setTimezone(parseFloat(e.target.value) || 0)}
+                  className="w-20 rounded-lg px-2 py-1 text-sm" style={{ border: "1px solid #4A5D23" }} />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm font-medium block mb-1" style={{ color: "#3F4B23" }}>طريقة الحساب</label>
+              <select value={method} onChange={(e) => setMethod(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm" style={{ border: "1px solid #4A5D23", background: "#fff" }}>
+                {Object.entries(METHODS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm font-medium block mb-1" style={{ color: "#3F4B23" }}>مذهب العصر</label>
+              <div className="flex gap-2">
+                <button onClick={() => setAsrFactor(1)} className="flex-1 rounded-lg py-2 text-sm font-medium"
+                  style={{ background: asrFactor === 1 ? "#3F4B23" : "#EAE0C0", color: asrFactor === 1 ? "#FFF6E0" : "#2A3318" }}>الشافعي/جمهور الفقهاء</button>
+                <button onClick={() => setAsrFactor(2)} className="flex-1 rounded-lg py-2 text-sm font-medium"
+                  style={{ background: asrFactor === 2 ? "#3F4B23" : "#EAE0C0", color: asrFactor === 2 ? "#FFF6E0" : "#2A3318" }}>الحنفي</button>
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <label className="text-sm font-medium block mb-2" style={{ color: "#3F4B23" }}>تعديل يدوي للأوقات (دقائق)</label>
+              <div className="space-y-2">
+                {PRAYERS.map((p) => (
+                  <div key={p.key} className="flex items-center justify-between">
+                    <span className="text-sm" style={{ color: "#2A3318" }}>{p.label}</span>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setOffsets((o) => ({ ...o, [p.key]: (o[p.key] || 0) - 1 }))}
+                        className="w-7 h-7 rounded-full text-sm font-bold" style={{ background: "#EAE0C0", color: "#2A3318" }}>−</button>
+                      <span className="w-8 text-center text-sm" style={{ color: "#2A3318" }}>{offsets[p.key] || 0}</span>
+                      <button onClick={() => setOffsets((o) => ({ ...o, [p.key]: (o[p.key] || 0) + 1 }))}
+                        className="w-7 h-7 rounded-full text-sm font-bold" style={{ background: "#EAE0C0", color: "#2A3318" }}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={() => setShowSettings(false)} className="w-full mt-4 rounded-lg py-2.5 font-medium flex items-center justify-center gap-2"
+              style={{ background: "#3F4B23", color: "#FFF6E0" }}>
+              <Check className="w-4 h-4" /> تم
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ringing overlay */}
+      {ringing && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6" style={{ background: "rgba(42,51,24,0.95)" }}>
+          <Bell className="w-16 h-16 mb-4 animate-bounce" style={{ color: "#E8C766" }} />
+          <p className="amiri text-2xl font-bold text-center mb-1" style={{ color: "#FFF6E0" }}>{ringing.label}</p>
+          <p className="text-sm mb-8" style={{ color: "#E8C766" }}>{now.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true })}</p>
+          <button onClick={stopRinging} className="rounded-full px-10 py-3 font-bold flex items-center gap-2"
+            style={{ background: "#E8C766", color: "#2A3318" }}>
+            <Square className="w-4 h-4" /> إيقاف
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToneSelector({ tones, active, onSelect, onPlay }) {
+  return (
+    <div className="space-y-1.5">
+      {tones.map((t) => (
+        <div key={t.id} onClick={() => onSelect(t.id)}
+          className="flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer"
+          style={{ background: active === t.id ? "#E8C766" : "#F3ECD6", border: active === t.id ? "1px solid #3F4B23" : "1px solid transparent" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ border: "2px solid #3F4B23", background: active === t.id ? "#3F4B23" : "transparent" }} />
+            <span className="text-sm" style={{ color: "#2A3318" }}>{t.name}{t.type === "custom" ? " (مخصص)" : ""}</span>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); onPlay(t.id); }}>
+            <Play className="w-4 h-4" style={{ color: "#3F4B23" }} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## `.gitignore`
+
+```text
+node_modules
+dist
+dist-ssr
+*.local
+
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+```
+
+---
+
+## `README.md`
+
+```md
+# مواقيت الصلاة والمنبه 🕌
+
+تطبيق ويب (React + Vite + Tailwind) لعرض مواقيت الصلاة، اتجاه القبلة، ومنبه للاستيقاظ مع إمكانية إضافة أصوات أذان مخصصة.
+
+## المزايا
+
+- حساب مواقيت الصلاة فلكيًا (فجر، شروق، ظهر، عصر، مغرب، عشاء) بناءً على الموقع الجغرافي
+- تحديد الموقع تلقائيًا عبر GPS، أو إدخاله يدويًا
+- عدة طرق حساب فلكية (رابطة العالم الإسلامي، أم القرى، ISNA، مصر، كراتشي) ومذهبي العصر (شافعي/حنفي)
+- تعديل يدوي لكل وقت صلاة بالدقائق
+- بوصلة تفاعلية لاتجاه القبلة باستخدام حساسات الجهاز
+- منبه متعدد قابل للإضافة والحذف
+- نغمات منبه وأذان مدمجة، مع إمكانية رفع ملف صوتي خاص (مثل تلاوة شيخ) لاستخدامه كأذان
+- تصميم بألوان ذهبية وزيتونية مستوحاة من الطراز الإسلامي
+
+## المتطلبات
+
+- [Node.js](https://nodejs.org) الإصدار 18 أو أحدث
+- npm (يأتي مع Node.js)
+
+## التشغيل محليًا
+
+```bash
+npm install
+npm run dev
+```
+
+سيفتح التطبيق على `http://localhost:5173`.
+
+## بناء نسخة الإنتاج
+
+```bash
+npm run build
+npm run preview
+```
+
+الناتج يكون في مجلد `dist/`، جاهز للنشر على أي استضافة استاتيكية (Vercel, Netlify, GitHub Pages...).
+
+## ملاحظات مهمة
+
+- **الموقع الجغرافي والبوصلة**: تتطلب المتصفحات الحديثة اتصالًا آمنًا (HTTPS) لتفعيل صلاحيات الموقع الجغرافي وحساسات الاتجاه. عند النشر تأكد أن الرابط يبدأ بـ `https://`.
+- **دقة المواقيت**: الحساب فلكي تقريبي، يُنصح بمقارنته مع مواقيت مسجدك المحلي.
+- **الملفات الصوتية المرفوعة**: تُخزَّن مؤقتًا في متصفح المستخدم فقط (عبر `URL.createObjectURL`) ولا تُحفظ في المشروع أو تُرفع إلى المستودع.
+- **حفظ الإعدادات**: تُحفظ الإعدادات (الموقع، أوقات المنبه، التفضيلات) في `localStorage` الخاص بالمتصفح.
+
+## النشر على GitHub Pages (اختياري)
+
+1. أضف إلى `vite.config.js`:
+   ```js
+   export default defineConfig({
+     base: "/اسم-المستودع/",
+     plugins: [react()],
+   });
+   ```
+2. نفّذ:
+   ```bash
+   npm run build
+   ```
+3. ادفع محتوى مجلد `dist/` إلى فرع `gh-pages`، أو استخدم إجراء GitHub Actions لنشر Vite تلقائيًا.
+
+## الترخيص
+
+هذا المشروع مفتوح للاستخدام والتعديل بحرية.
+```
+
+---
