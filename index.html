@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ط§ظ„ظ…ظ†ط§ط± ط§ظ„ط±ظˆطظٹ - ط³ط§ط¹ط© ط§ظ„ط £ط°ط§ظ† ظˆط§ظ„ظ‚ط±ط¢ظ† ط§ظ„ظƒط±ظٹظ…</title>
+
+    <!-- ط¯ط¹ظ… "ط¥ط¶ط§ظپط© ط¥ظ„ظ‰ ط§ظ„ط´ط§ط´ط© ط§ظ„ط±ط¦ظٹط³ظٹط©” ظ„ظٹط¹ظ…ظ„ ط§ظ„طھط·ط¨ظٹظ‚ ظƒطھط·ط¨ٹظ‚ ظ…ط³طھظ‚ظ„ (PWA) -->
+    <meta name="theme-color" content="#2C3E2B">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ط§ظ„ظ…ظ†ط§ط± ط§ظ„ط±ظˆطظٹ">
+
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital@0;1&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :جذر {
+            --olive-dark: #2C3E2B;
+            --olive-medium: #3D5A42;
+            --olive-light: #52795D;
+            --gold-dark: #8C6D23;
+            --gold-bright: #D4AF37;
+            --gold-light: #F3E5AB;
+            --gold-bg: radial-gradient(circle, #F9F5E8 0%, #E6D5B3 100%);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
+
+        جسم {
+            الخلفية: var(--gold-bg);
+            اللون: متغير (--olive-dark)؛
+            الحد الأدنى للارتفاع: 100vh؛
+            العرض: مرن؛
+            اتجاه المرونة: عمود؛
+            overflow-x: hidden;
+            الموضع: نسبي؛
+        }
+
+        body::before {
+            محتوى: ""؛
+            الوضع: ثابت؛
+            أسفل: 60 بكسل؛
+            اليسار: 0؛
+            العرض: 100%؛
+            الارتفاع: 250 بكسل؛
+            الخلفية: تدرج خطي (شفاف، rgba(44,62,43,0.05))؛
+            أحداث المؤشر: لا شيء؛
+            مؤشر z: 0؛
+        }
+
+        .app-container {
+            المرونة: 1؛
+            الحشو: 20 بكسل؛
+            padding-bottom: 90px;
+            مؤشر z: 1؛
+            أقصى عرض: 600 بكسل؛
+            margin: 0 auto;
+            العرض: 100%؛
+        }
+
+        header { text-align: center; padding: 15px 0; border-bottom: 2px solid var(--gold-bright); margin-bottom: 20px; }
+        header h1 { font-family: 'Amiri', serif; color: var(--olive-dark); font-size: 1.8rem; }
+        header p { font-size: 0.9rem; color: var(--olive-medium); }
+
+        .screen { display: none; animation: fadeIn 0.4s ease-in-out forwards; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .بطاقة {
+            الخلفية: rgba(255,255,255,0.9)؛
+            border: 2px solid var(--gold-bright);
+            border-radius: 15px;
+            الحشو: 20 بكسل؛
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(44,62,43,0.1);
+        }
+
+        .card-title {
+            اللون: متغير (--olive-dark)؛
+            border-bottom: 1px solid var(--gold-light);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            حجم الخط: 1.2 ريم؛
+            العرض: مرن؛
+            align-items: center;
+            الفجوة: 10 بكسل؛
+        }
+        .card-title i { color: var(--gold-dark); }
+
+        .main-clock { text-align: center; font-size: 2.8rem; font-weight: 900; color: var(--olive-dark); margin: 10px 0; letter-spacing: 2px; }
+
+        .prayer-time-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px dashed var(--gold-light); }
+        .prayer-time-row:last-child { border-bottom: none; }
+        .prayer-time-row.active { background-color: var(--olive-light); color: #fff; border-radius: 8px; padding: 12px; }
+        .prayer-time-row.active span { color: var(--gold-light) !important; font-weight: bold; }
+
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+
+        إدخال، تحديد {
+            العرض: 100%؛ الحشو: 10 بكسل؛ الحدود: 1 بكسل صلب var(--gold-bright);
+            border-radius: 8px; background: #fff; color: var(--olive-dark); outline: none; font-size: 1rem;
+        }
+        input:focus, select:focus { border-color: var(--olive-dark); box-shadow: 0 0 5px rgba(61,90,66,0.3); }
+
+        زر {
+            الخلفية: تدرج خطي (135 درجة، فار (- زيتوني متوسط)، فار (- زيتوني داكن))؛
+            اللون: var(--gold-light)؛ الحد: 1px صلب var(--gold-bright)؛
+            الحشو: 12 بكسل 20 بكسل؛ نصف قطر الحواف: 8 بكسل؛ المؤشر: مؤشر؛ العرض: 100%؛
+            وزن الخط: غامق؛ حجم الخط: 1 ريم؛ الانتقال: 0.2 ثانية (سهولة)؛
+        }
+        button:hover { transform: scale(1.02); background: linear-gradient(135deg, var(--olive-dark), #1b261a); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .compass-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 0; }
+
+        .compass-ring {
+            العرض: 260 بكسل؛ الارتفاع: 260 بكسل؛ نصف قطر الحواف: 50%؛
+            border: 10px solid var(--olive-dark);
+            box-shadow: 0 0 0 5px var(--gold-bright), 0 8px 20px rgba(0,0,0,0.15);
+            الموضع: نسبي؛
+            الخلفية: تدرج شعاعي (دائرة، #fff 60%، متغير (--gold-light) 100%)؛
+            الانتقال: تحويل 0.1 ثانية تباطؤ تدريجي؛
+        }
+
+        .compass-pointer { width: 20px; height: 20px; background: var(--gold-bright); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; }
+
+        .compass-needle { العرض: 8 بكسل؛ الارتفاع: 100%؛ الموضع: مطلق؛ أعلى: 0؛ يسار: calc(50% - 4 بكسل)؛ z-index: 5؛ }
+        .compass-needle::before { content: ""; position: absolute; top: 10px; left: 0; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 120px solid #d9534f; }
+        .compass-needle::after { content: ""; position: absolute; bottom: 10px; left: 0; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 120px solid var(--olive-dark); }
+
+        .qibla-indicator { position: absolute; width: 100%; height: 100%; top: 0; left: 0; transform: rotate(0deg); z-index: 4; transition: transform 0.2s ease-out; }
+        .qibla-indicator::before {
+            المحتوى: "\f663"؛ نوع الخط: "Font Awesome 6 Free"؛ وزن الخط: 900؛
+            الموضع: مطلق؛ أعلى: 25 بكسل؛ يسار: calc(50% - 12 بكسل)؛ اللون: var(--gold-dark)؛ حجم الخط: 24 بكسل؛
+        }
+
+        .compass-label { position: absolute; font-weight: bold; font-size: 1.1rem; color: var(--olive-dark); }
+        .label-n { top: 15px; left: 50%; transform: translateX(-50%); color: #d9534f; }
+        .label-s { bottom: 15px; left: 50%; transform: translateX(-50%); }
+        .label-e { right: 15px; top: 50%; transform: translateY(-50%); }
+        .label-w { left: 15px; top: 50%; transform: translateY(-50%); }
+
+        .quran-index { max-height: 400px; overflow-y: auto; border: 1px solid var(--gold-light); border-radius: 8px; background: #fff; }
+        .surah-item { display: flex; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+        .surah-item:hover { background-color: var(--gold-light); }
+
+        .quran-reader { display: none; }
+        نص القرآن {
+            نوع الخط: 'Amiri'، serif؛ حجم الخط: 1.5rem؛ ارتفاع السطر: 2.4؛ محاذاة النص: ضبط؛
+            الحشو: 15 بكسل؛ الخلفية: #fff؛ نصف قطر الحواف: 8 بكسل؛ الحدود: 1 بكسل صلبة var(--gold-bright);
+            أقصى ارتفاع: 450 بكسل؛ تجاوز المحتوى على المحور الرأسي: تلقائي؛ الاتجاه: من اليمين إلى اليسار؛
+        }
+
+        .nav-bar {
+            الموضع: ثابت؛ أسفل: 0؛ يسار: 0؛ العرض: 100%؛ الارتفاع: 70 بكسل؛
+            لون الخلفية: var(--olive-dark)؛ الحد العلوي: 3 بكسل صلب var(--gold-bright)؛
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--gold-light); text-decoration: none; font-size: 0.8rem; cursor: pointer; transition: 0.2s; background: none; border: none; flex: 1; }
+        .nav-item i { font-size: 1.4rem; margin-bottom: 4px; transition: 0.2s; }
+        .nav-item.active { color: var(--gold-bright); }
+        .nav-item.active i { transform: translateY(-5px); }
+
+        .alarm-status { font-weight: bold; color: green; text-align: center; margin-top: 10px; }
+        .volume-control { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+        .status-note { حجم الخط: 0.8 ريم؛ اللون: var(--olive-medium)؛ محاذاة النص: توسيط؛ الهامش العلوي: 8 بكسل؛ }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>ط§ظ„ظ…ظ†ط§ط± ط§ظ„ط±ظˆطظٹ</h1>
+            <p>ط³ط§ط¹ط© ط§ظ„ط £ط°ط§ظ†طŒ ط¨ظˆطظ„ط© ط§ظ„ظ‚ط¨ظ„ط© ظˆط§ظ„ظ…طμطظپ ط§ظ„ط´ط±ظٹظپ</p>
+        </header>
+
+        <!-- ط§ظ„ط´ط§ط´ط© 1: ط§ظ„ط³ط§ط¹ط© ظˆط§ظ„ط £ظˆظ‚ط§طھ -->
+        <div id="screen-prayer" class="screen active">
+            <div class="card">
+                <div class="card-title"><i class="fa-regular fa-clock"></i> ط§ظ„ظˆظ‚طھ ط§ظ„طط§ظ„ظٹ</div>
+                <div class="main-clock" id="live-clock">12:00:00 ظ…</div>
+                <div style="text-align:center; font-size:0.9rem; color:var(--olive-medium);" id="current-date">--</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-mosque"></i> ظ…ظˆط§ظ‚ظٹطھ ط§ظ„طµظ„ط§ط©</div>
+                <div id="prayer-list">
+                    <div class="prayer-time-row" id="p-fajr">
+                        <span>ط§ظ„ظپط¬ط±</span>
+                        <input type="time" id="t-fajr" value="04:15" style="width:120px;">
+                    </div>
+                    <div class="prayer-time-row" id="p-dhuhr">
+                        <span>ط§ظ„ط¸ظ‡ط±</span>
+                        <input type="time" id="t-dhuhr" value="12:45" style="width:120px;">
+                    </div>
+                    <div class="prayer-time-row" id="p-asr">
+                        <span>ط§ظ„ط¹طط±</span>
+                        <input type="time" id="t-asr" value="16:20" style="width:120px;">
+                    </div>
+                    <div class="prayer-time-row" id="p-maghrib">
+                        <span>ط§ظ‹ظ…ط؛ط±ط¨</span>
+                        <input type="time" id="t-maghrib" value="19:55" style="width:120px;">
+                    </div>
+                    <div class="prayer-time-row" id="p-isha">
+                        <span>ط§ظ„ط¹ط´ط§ط،</span>
+                        <input type="time" id="t-isha" value="21:30" style="width:120px;">
+                    </div>
+                </div>
+                <p class="status-note">ط¹ط¯ظ'ظ„ ط§ظ„ط £ظˆظ‚ط§طھ ظٹط¯ظˆظٹط§ظ‹ ظطھظ†ط§ط³ط¨ ظ…ظ†ط·ظ‚طھظƒطŒ ط«ظ… ط§ط¶ط;ط· طھظپط¹ٹظظ„ ط§ظ„طμظˆطھ ط £ط¯ظ†ط§ظ‡ ظ…ط±ط© ظˆط§طط¯ط© ططھظ‰ ظٹط³ظ…طط§ظ„ظ…طھطط´طط؛ظٹظ„ ط§ظ„ط £ط°ط§ظ† طھظ„ظ‚ط§ط¦ظٹط§ظ‹.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-volume-high"></i> ط¥ط¹ط¯ط§ط¯ط§طھ طµظˆطھ ط§ظ„ط£ط°ط§ظ†</div>
+                <div class="input-group">
+                    <label>طμظˆطھ ط§ظ„ظ…ط¤ط°ظ†:</label>
+                    <select id="adhan-voice">
+                        <option value="https://download.tvquran.com/download/sounds/athan/1.mp3">ط£ط°ط§ظ† ظ†ط¯ظٹ ظˆظ‡ط§ط¯ط¦</option>
+                        <option value="https://download.tvquran.com/download/sounds/athan/2.mp3">ط £ط°ط§ظ† ط§ظ„ظ…ط³ط¬ط¯ ط§ظ„ط £ظ‚طμظ‰</option>
+                        <option value="https://download.tvquran.com/download/sounds/athan/3.mp3">ط £ط°ط§ظ† ظ…ظƒط© ط§ظ„ظ…ظƒط±ظ…ط©</option>
+                    </select>
+                </div>
+                <button onclick="enableAudio()">طھظپط¹ظٹظ„ ط§ظ„ط§ظˆطھ (ط§ط¶ط؛ط· ظ…ط±ط© ظˆط§طط¯ط©)</button>
+                <p class="status-note" id="audio-status">ط§ظ„طμظˆطھ ط؛ظٹط± ظ…ظڈظپط¹ظ'ظ„ ط¨ط¹ط¯.</p>
+            </div>
+        </div>
+
+        <!-- ط§ظ„ط´ط§ط´ط© 2: ط§ظ„ظ…ظ†ط¨ظ‡ -->
+        <div id="screen-alarm" class="screen">
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-bell"></i> ط¶ط¨ط· ظ…ظ†ط¨ظ‡ ط§ظ„ط§ط³طھظٹظ‚ط§ط¸</div>
+                <div class="input-group">
+                    <label>ط§ط®طھط± ظˆظ‚طھ ط§ظ„ط§ط³طھظٹظ‚ط§ط¸:</label>
+                    <input type="time" id="alarm-time" value="06:00">
+                </div>
+                <div class="input-group">
+                    <label>ظ†ط؛ظ…ط© ط§ظ„ظ…ظ†ط¨ظ‡:</label>
+                    <select id="alarm-tone">
+                        <option value="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">ط±ظ†ظٹظ† ط±ظ‚ظ…ظٹ طط§ط¯ ظˆظ…ط±طھظپط¹</option>
+                        <option value="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">ظ…ظ†ط¨ظ‡ ظƒظ‹ط§ط³ظٹظƒظٹ ظ‚ظˆظٹ</option>
+                        <option value="https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg">ط¬ط±ط³ ظ…ظٹظƒط§ظ†ظٹظƒظٹ طμط§ط®ط¨</option>
+                    </select>
+                </div>
+                <div class="volume-control">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <input type="range" id="alarm-volume" min="0" max="1" step="0.1" value="1">
+                    <span>ظ…ط³طھظˆظ‰ ط§ظ„طμظˆطھ</span>
+                </div>
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button onclick="setAlarm()">طھظپط¹ظٹظ‹ ط§ظ‹ظ…ظ†ط¨ظ‡</button>
+                    <button onclick="stopAlarm()" style="background:#d9534f;">ط¥ظٹظ‚ط§ظپ ط§ظ„ط±ظ†ظٹظ†</button>
+                </div>
+                <p class="alarm-status" id="alarm-status-text">ط§ظ„ظ…ظ†ط¨ظ‡ ط;ظٹط± ظ†ط´ط· طط§ظ„ظٹط§ظ‹</p>
+            </div>
+        </div>
+
+        <!-- ط§ظ„ط´ط§ط´ط© 3: ط§ظ„ظ…طμطظپ -->
+        <div id="screen-quran" class="screen">
+            <div class="card" id="index-card">
+                <div class="card-title"><i class="fa-solid fa-book-quran"></i> ط§ظ„ظ‚ط±ط¢ظ† ط§ظ„ظƒط±ظٹظ…</div>
+                <div class="input-group">
+                    <label>ط§ط®طھط± ط§ظ„ظ‚ط§ط±ط¦ ط§ظ„طμظˆطھظٹ:</label>
+                    <select id="quran-reader-voice">
+                        <option value="https://server8.mp3quran.net/afs/">ط§ظ„ط´ظٹط® ظ…ط´ط§ط±ظٹ ط§ظ„ط¹ظپط§ط³ظٹ</option>
+                        <option value="https://server11.mp3quran.net/yasser/">ط§ظ„ط´ظٹط® ظٹط§ط³ط± ط§ظ„ط¯ظˆط³ط±ظٹ</option>
+                        <option value="https://server12.mp3quran.net/maher/">ط§ظ„ط´ظٹط® ظ…ط§ظ‡ط± ط§ظ„ظ…ط¹ظٹظ‚ظ„ظٹ</option>
+                    </select>
+                </div>
+                <div class="quran-index" id="surah-list"></div>
+            </div>
+
+            <div class="card quran-reader" id="reader-card">
+                <button onclick="backToSurahList()" style="margin-bottom:15px; background:var(--gold-dark);"><i class="fa-solid fa-arrow-right"></i> ط§ظ„ط¹ظˆط¯ط© ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ط³ظˆط±</button>
+                <h3 id="current-surah-title" style="text-align:center; margin-bottom:15px; font-family:'Amiri', serif; font-size:1.8rem; color:var(--gold-dark);"></h3>
+                <audio id="quran-audio" controls style="width:100%; margin-bottom:15px;"></audio>
+                <div class="quran-text" id="surah-content">ط¬ط§ط±ظٹ طھطظ…ظٹظ„ ط§ظ„ط¢ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ظƒط©...</div>
+            </div>
+        </div>
+
+        <!-- ط§ظ‹ط´ط§ط´ط© 4: ط§ظ‹ط¨ظˆطظ‹ط© -->
+        <div id="screen-compass" class="screen">
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-compass"></i> ط¨ظˆطµظ„ط© ط§طھط¬ط§ظ‡ ط§ظ„ظ‚ط¨ظ„ط©</div>
+                <p style="font-size:0.9rem; text-align:center; Margin-bottom:15px; color:var(--olive-medium);">ط§ط¶ط؛ط· ط§ظ„ط²ط± ط £ط¯ظ†ط§ظ‡ ظ„ظ„ط³ظ…ط§ط ط¨ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ‹ط¬ط؛ط±ط§ظپظٹ ظˆط³ط§ط³ ط§ظ‹ط§طھط¬ط§ظ‡طŒ ط«ظ… ط £ط¯ط± ط§ظ„ظ‡ط§طھظپ ططھظ‰ طھطھظˆط³ط· ط £ظٹظ‚ظˆظ†ط© ط§ظ„ظƒط¹ط¨ط© ط £ط¹ظ„ظ‰ ط§ظ„ط¨ظˆطμظ„ط©.</p>
+
+                <div class="compass-container">
+                    <div class="compass-ring" id="compassRing">
+                        <div class="compass-pointer"></div>
+                        <div class="compass-needle"></div>
+                        <div class="qibla-indicator" id="qiblaIndicator"></div>
+                        <div class="compass-label label-n">شمال</div>
+                        <div class="compass-label label-s">S</div>
+                        <div class="compass-label label-e">E</div>
+                        <div class="compass-label label-w">غرب</div>
+                    </div>
+                </div>
+                <div style="text-align:center; margin-top:15px; font-weight:bold;" id="compass-heading">ط§ظ„ط²ط§ظˆظٹط©: --</div>
+                <div style="text-align:center; font-size:0.85rem; color:var(--olive-medium);" id="qibla-info">ط§طھط¬ط§ظ‡ ط§ظ„ظ‚ط¨ظ„ط©: --</div>
+                <button onclick="requestCompassPermission()" style="margin-top:15px; الخلفية-لون: var(--olive-light);">طھظپط¹ظٹظ‹ ط§ظ„ظ…ظˆظ‚ط¹ ظˆط§ظ„ط¨ظˆطظ„ط©</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <button class="nav-item active" onclick="switchTab('prayer', this)"><i class="fa-solid fa-mosque"></i><span>ط§ظ„ط±ط¦ظٹط³ظٹط©</span></button>
+        <button class="nav-item" onclick="switchTab('alarm', this)"><i class="fa-solid fa-bell"></i><span>ط§ظ„ظ…ظ†ط¨ظ‡</span></button>
+        <button class="nav-item" onclick="switchTab('quran', this)"><i class="fa-solid fa-book-open"></i><span>ط§ظ„ظ‚ط±ط¢ظ†</span></button>
+        <button class="nav-item" onclick="switchTab('compass', this)"><i class="fa-solid fa-compass"></i><span>بوصلة </span></button>
+    </nav>
+
+    <معرف الصوت = "adhan-player"></audio>
+    <audio id="alarm-player-audio" loop></audio>
+
+    <script>
+        // ---------- ط§ظ„طھط¨ظˆظٹط¨ط§طھ ----------
+        دالة تبديل علامة التبويب (معرف الشاشة، الزر) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('screen-' + screenId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // ---------- طھظپط¹ظٹظ‹ ط§ظ‹طظظˆطھ (طظ‹ ظ…ط´ظƒظ‹ط© ظ…ظ†ط¹ ط§ظ‹طھط´ط؛ظٹظ‹ ط§ظ‹طھظ‹ظ‚ط§ط¦ظٹ) ----------
+        let audioUnlocked = false;
+        دالة تمكين الصوت() {
+            const adhan = document.getElementById('adhan-player');
+            const alarmA = document.getElementById('alarm-player-audio');
+            [أذان، إنذارA].forEach(a => {
+                a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+            });
+            audioUnlocked = true;
+            document.getElementById('audio-status').innerText = "طھظ… طھظپط¹ظٹظ„ ط§ظ„طμظˆطھ ط¨ظ†ط¬ط§ططŒ ط§ظ„ط £ط°ط§ظ† ظˆط§ظ„ظ…ظ†ط¨ظ‡ ط³ظٹط¹ظ…ظ‹ط§ظ† طھظ‹ظ‚ط§ط¦ظٹط§ظ‹.”;
+            document.getElementById('audio-status').style.color = "green";
+        }
+
+        // ---------- ط§ظ‹ط³ط§ط¹ط© ظˆظپططμ ط§ظ‹ط £ط°ط§ظ†/ط§ظ„ظ…ظ†ط¨ظ‡ ----------
+        let currentAlarmTime = null;
+        let isAlarmActive = false;
+        let lastPlayedAdhan = { name: "", date: "" };
+        Let lastAlarmFire ​​= { time: ""، date: "" };
+
+        دالة مفتاح اليوم() {
+            const d = new Date();
+            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        }
+
+        دالة تحديث الساعة() {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('ar-SY', options);
+            document.getElementById('current-date').innerText = now.toLocaleDateString('ar-SY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const curHours = String(now.getHours()).padStart(2, '0');
+            const curMinutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${curHours}:${curMinutes}`;
+            const dKey = todayKey();
+
+            إذا كان (المنبه نشطًا && الوقت الحالي === وقت المنبه الحالي &&
+                !(lastAlarmFire.time ===currentTimeStr && lastAlarmFire.date === dKey)) {
+                lastAlarmFire ​​= { time: currentTimeStr, date: dKey };
+                triggerAlarm();
+            }
+
+            checkAdhanTrigger(currentTimeStr, dKey);
+        }
+        setInterval(updateClock, 1000);
+
+        دالة التحقق من تشغيل الأذان (سلسلة الوقت، مفتاح البيانات) {
+            الصلاة الدائمة = ['الفجر'، 'الظهر'، 'العصر'، 'المغرب'، 'العشاء']؛
+            prayers.forEach(p => {
+                const pTime = document.getElementById('t-' + p).value;
+                إذا كان (timeStr === pTime && !(lastPlayedAdhan.name === p && lastPlayedAdhan.date === dKey)) {
+                    lastPlayedAdhan = { name: p, date: dKey };
+                    تشغيل الأذان();
+                }
+            });
+        }
+
+        دالة تشغيل الأذان() {
+            const adhanAudioUrl = document.getElementById('adhan-voice').value;
+            const player = document.getElementById('adhan-player');
+            player.src = adhanAudioUrl;
+            player.play().catch(() => console.log("ظٹط±ط¬ظ‰ ط§ظ„ط¶ط;ط· ط¹ظ„ظ‰ ط²ط± طھظپط¹ظٹظ„ ط§ظ„طμظˆطھ ط £ظˆظ„ط§ظ‹."));
+        }
+
+        // ---------- ط§ظ„ظ…ظ†ط¨ظ‡ ----------
+        دالة setAlarm() {
+            currentAlarmTime = document.getElementById('alarm-time').value;
+            isAlarmActivate = true;
+            lastAlarmFire ​​= { الوقت: ""، التاريخ: "" };
+            document.getElementById('alarm-status-text').innerText = `ط§ظ„ظ…ظ†ط¨ظ‡ ظ…ط¶ط¨ظˆط· ط¹ظ„ظ‰ ط§ظ„ط³ط§ط¹ط© ${currentAlarmTime}`;
+            document.getElementById('alarm-status-text').style.color = "green";
+        }
+
+        دالة إيقاف الإنذار() {
+            const alarmPlayer = document.getElementById('alarm-player-audio');
+            alarmPlayer.pause();
+            alarmPlayer.currentTime = 0;
+            isAlarmActivate = false;
+            document.getElementById('alarm-status-text').innerText = "طھظ… ط¥ظٹظ‚ط§ظپ ط§ظ„ظ…ظ†ط¨ظ‡ ط¨ظ†ط¬ط§ط”;
+            document.getElementById('alarm-status-text').style.color = "red";
+        }
+
+        دالة triggerAlarm() {
+            const alarmPlayer = document.getElementById('alarm-player-audio');
+            alarmPlayer.src = document.getElementById('alarm-tone').value;
+            alarmPlayer.volume = parseFloat(document.getElementById('alarm-volume').value);
+            AlarmPlayer.play().catch(() => console.log("ظٹط±ط¬ظ‰ طھظپط¹ظٹظ„ ط§ظ„طμظˆطھ ط £ظˆظ„ط§ظ‹."));
+        }
+
+        // ---------- ط¨ظˆظظٹط© ط§ظ„ظ‚ط¨ظ„ط© ط§ظ„طظ‚ظٹظ‚ظٹط© (طط³ط§ط¨ ظپظ„ظƒظٹ ظ…ظ† ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط¬ط;ط±ط§ظپظٹ) ----------
+        const KAABA_LAT = 21.4225;
+        const KAABA_LNG = 39.8262;
+        let qiblaBearing = null;
+
+        دالة حساب اتجاه القبلة (خط العرض، خط الطول) {
+            const toRad = deg => deg * Math.PI / 180;
+            const toDeg = rad => rad * 180 / Math.PI;
+            const lat1 = toRad(lat), lat2 = toRad(KAABA_LAT);
+            const dLng = toRad(KAABA_LNG - lng);
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            let bearing = toDeg(Math.atan2(y, x));
+            return (bearing + 360) % 360;
+        }
+
+        دالة طلب إذن البوصلة() {
+            إذا لم تكن خاصية تحديد الموقع الجغرافي (navigator.geolocation) {
+                تنبيه("ظ…طھطμظپطظƒ ظط§ ظٹط¯ط¹ظ… طھطط¯ظٹط¯ ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط¬ط;ط±ط§ظپظٹ.”);
+                يعود؛
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    qiblaBearing = calculateQiblaBearing(pos.coords.latitude, pos.coords.longitude);
+                    document.getElementById('qibla-info').innerText = `ط§طھط¬ط§ظ‡ ط§ظ„ظ‚ط¨ظ„ط©: ${Math.round(qiblaBearing)}آ° ظ…ظ† ط§ظ„ط´ظ…ط§ظ„`;
+                    startOrientationListening();
+                },
+                () => تنبيه("طھظ… ط±ظپط¶ ط¥ط°ظ† ط§ظ„ظ…ظˆظ‚ط¹طŒ ظ„ط§ ظٹظ…ظƒظ† طط³ط§ط¨ ط§طھط¬ط§ظ‡ ط§ظ„ظ‚ط¨ظ„ط© ط¨ط¯ظ‚ط©..”),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        دالة بدء الاستماع إلى اتجاه الجهاز () {
+            const DOE = window.DeviceOrientationEvent;
+            إذا كان (DOE && نوع DOE.requestPermission يساوي 'function') {
+                // ظ†ط¸ط§ظ… iOS 13+ ظٹطھط·ظ„ط¨ ط¥ط°ظ†ط§ظ‹ طμط±ظٹط§ظ‹
+                DOE.requestPermission()
+                    ثم(الحالة => {
+                        إذا كانت الحالة تساوي 'ممنوحة' {
+                            window.addEventListener('deviceorientation', handleOrientation, true);
+                        } آخر {
+                            تنبيه("طھظ… ط±ظپط¶ ط¥ط°ظ† ط§ظ„ظˆطμظˆظ„ ظ„طط³ط§ط³ ط§ظ„ط§طھط¬ط§ظ‡.”);
+                        }
+                    })
+                    .catch(console.error);
+            } else if (DOE) {
+                // ط £ظ†ط¯ط±ظˆظٹط¯ ظˆظ…ط¹ط¸ظ… ط§ظ„ظ…طھطμظپط§طھ: ظ„ط§ طط§ط¬ط© ظ„ط·ظ„ط¨ ط¥ط°ظ† طμط±ظٹط
+                window.addEventListener('deviceorientation', handleOrientation, true);
+            } آخر {
+                تنبيه("ط¬ظ‡ط§ط²ظƒ ظط§ ظٹط¯ط¹ظ… طط³ط§ط³ ط§ظ„ط§طھط¬ط§ظ‡طŒ ظ„ظظظ† طھظ… طط³ط§ط¨ ط²ط§ظˆظٹط© ط§ظ„ظ‚ط¨ظ† طھظ© ط £ط¹ظ„ط§ظ‡ ظˆظٹظ…ظƒظ†ظƒ ط§ط³طھط®ط¯ط§ظ… ط¨ظˆطظ„ط© ظٹط¯ظˆظٹط©.”);
+            }
+        }
+
+        دالة معالجة التوجيه (حدث) {
+            let heading = event.webkitCompassHeading !== undefined
+                ? event.webkitCompassHeading // iOS: 0 = ط´ظ…ط§ظ„ ظ…ط¨ط§ط´ط±ط©
+                : (event.alpha !== null ? 360 - events.alpha : null); // ط £ظ†ط¯ط±ظˆظٹط¯: alpha ظٹط²ظٹط¯ ط¹ظƒط³ ط¹ظ‚ط§ط±ط¨ ط§ظ„ط³ط§ط¹ط©
+
+            إذا كان (العنوان === فارغ || العنوان === غير مُعرّف) فارجع؛
+            heading = Math.round(heading);
+
+            const compassRing = document.getElementById('compassRing');
+            compassRing.style.transform = `rotate(${-heading}deg)`;
+            document.getElementById('compass-heading').innerText = `ط§ظ„ط²ط§ظˆظٹط© ط§ظ„طط§ظ„ظٹط©: ${heading}آ°`;
+
+            إذا كان (اتجاه القبلة !== فارغ) {
+                const qiblaIndicator = document.getElementById('qiblaIndicator');
+                qiblaIndicator.style.transform = `rotate(${qiblaBearing}deg)`;
+            }
+        }
+
+        // ---------- ط§ظ„ظ‚ط±ط¢ظ† ط§ظ„ظƒط±ظٹظ… ----------
+        const surahs = [
+            { id: 1, name: "ط§ظ„ظپط§طھط©", verses: 7 }, { id: 2, name: "ط§ظ„ط¨ظ‚ط±ط©", verses: 286 },
+            { المرجع: 3، الاسم: "ط§ظ„ ط¹ظ…ط±ط§ظ†"، الآيات: 200 }، { المعرف: 4، الاسم: "ط§ظ„ظ†ط³ط§ط،، الآيات: 176 },
+            { المرجع: 5، الاسم: "ط§ظ„ظ…ط§ط¦ط¯ط©، الآيات: 120 }، { المعرف: 6، الاسم: "ط§ظظ†ط¹ط§ظ…"، الآيات: 165 },
+            { المرجع: 18، الاسم: "ط§ظ„ظظظظظپ، الآيات: 110 }، { المعرف: 36، الاسم: "ظٹط³"، الآيات: 83 }،
+            { id: 55, name: "ط§ظ„ط±طظ…ظ†", verses: 78 }, { id: 56, name: "ط§ظ„ظˆط§ظ‚ط¹ط©", verses: 96 },
+            { المرجع: 67، الاسم: "ط§ظ„ظ…ظظƒ، الآيات: 30 }، { المرجع: 112، الاسم: "ط§ظ„ط¥ط®ظ„ط§طμ، الآيات: 4 },
+            { المرجع: 113، الاسم: "ط§ظظظظ†ط§ط³"، الآيات: 5 }، { المرجع: 114، الاسم: "ط§ظ„ظ†ط§ط³، الآيات: 6 }
+        ];
+
+        دالة بناء قائمة السورات () {
+            const listContainer = document.getElementById('surah-list');
+            listContainer.innerHTML = "";
+            surahs.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'surah-item';
+                item.onclick = () => openSurah(s.id, s.name);
+                item.innerHTML = `
+                    ${s.id}. ط³ظˆط±ط© ${s.name}</span>
+                    <span style="font-size:0.85rem; color:var(--olive-light);">${s.verses} ط¢ظٹط§طھ</span>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        دالة فتح السورة (المعرف، الاسم) {
+            document.getElementById('index-card').style.display = 'none';
+            document.getElementById('reader-card').style.display = 'block';
+            document.getElementById('current-surah-title').innerText = `ط³ظˆط±ط© ${name}`;
+
+            const contentDiv = document.getElementById('surah-content');
+            contentDiv.innerHTML = "ط¬ط§ط±ظٹ طھطظ…ظٹظ„ ط§ظ„ط¢ظٹط§طھ ظ…ظ† ط®ط§ط¯ظ… ط§ظ„ظ…طμطظپ ط§ظ„ط´ط±ظٹظپ...”;
+
+            const baseAudioUrl = document.getElementById('quran-reader-voice').value;
+            const surahFormattedNumber = String(id).padStart(3, '0');
+            const quranAudio = document.getElementById('quran-audio');
+            quranAudio.src = `${baseAudioUrl}${surahFormattedNumber}.mp3`;
+
+            جلب(`https://api.alquran.cloud/v1/surah/${id}`)
+                .then(res => res.json())
+                ثم(البيانات => {
+                    إذا كان رمز البيانات يساوي 200 {
+                        let text = "";
+                        let bismillahHtml = "";
+                        data.data.ayahs.forEach((آية، فهرس) => {
+                            let ayahText = yah.text;
+                            if (id !== 1 && Index === 0 && ayahText.startsWith("ط¨ظگط³ظ'ظ…ظگ ط§ظ„ظ„ظژظ'ظ‡ظگ ط§ظ„ط±ظژظ'طظ'ظ…ظژظ°ظ†ظگ ط§ظ„ط±ظژظ'طظگظٹظ…ظگ))) {
+                                ayahText = ayahText.replace("ط¨ظگط³ظ'ظ…ظگ ط§ظ„ظ„ظژظ'ظ‡ظگ ط§ظ„ط±ظژظ'طظ'ظ…ظژظ°ظ†ظگ ط§ظ„ط±ظژظ'طظگظٹظ…ظگ", "").trim();
+                                bismillahHtml = `<div style="text-align:center; الخط-family:'Amiri'; حجم الخط:1.6rem; هامش-أسفل:15px; color:var(--gold-dark);">ط¨ظگط³ظ'ظ…ظگ ط§ظ„ظ„ظ‹ظژظ'ظ‡ظگ ط§ظ‹ط±ظژظ'طظ'ظ…ظژظ°ظ†ظگ ط§ظ‹ط±ظژظ'طظگظٹظ…ظگ</div>`;
+                            }
+                            text += ` ${ayahText} ï´؟${ayah.numberInSurah}ï´¾ `;
+                        });
+                        contentDiv.innerHTML = bismillahHtml + text;
+                    } آخر {
+                        contentDiv.innerHTML = "طط¯ط« ط®ط·ط £ ط £ ط«ظ†ط§ط، طھطظ…ظٹظ„ ط§ظ„ط³ظˆط±ط©طŒ ظٹط±ط¬ظ‰ ط§ظ„ظ…طط§ظˆظ„ط© ظ„ط§ط‚ط§ظ‹.”;
+                    }
+                })
+                .catch(() => {
+                    contentDiv.innerHTML = "ظٹط±ط¬ظ‰ ط§ظ„طھطظ‚ظ‚ ظ…ظ† ط§طھطμط§ظظ„ظƒ ط¨ط§ظظ„ط¥ظ†طھط±ظ†طھ ظ„ط¹ط±ط¶ ط§ظ„ط™ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ظ©ط©.”;
+                });
+        }
+
+        دالة العودة إلى قائمة السورات() {
+            document.getElementById('reader-card').style.display = 'none';
+            document.getElementById('index-card').style.display = 'block';
+            document.getElementById('quran-audio').pause();
+        }
+
+        window.onload = () => { buildSurahList(); };
+    </script>
+</body>
+  </html>
